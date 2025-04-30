@@ -39,7 +39,7 @@ CPU_ONLY=${CPU_ONLY:-""}
 
 while true; do
     # Prompt the user
-    echo -e "\033[36m\033[1mPlease select a swarm to join:\n[A] Math (uses CPU)\n[B] Math Hard (uses GPU)\033[0m"
+    echo -e "\033[36m\033[1mPlease select a swarm to join:\n[A] Math\n[B] Math Hard\033[0m"
     read -p "> " ab
     ab=${ab:-A}  # Default to "A" if Enter is pressed
 
@@ -76,8 +76,8 @@ cleanup() {
 
 trap cleanup INT
 
-if ls "$ROOT_DIR/modal-login/temp-data/"*.json 1> /dev/null 2>&1; then
-  rm "$ROOT_DIR/modal-login/temp-data/"*.json
+if ls "$HOME/rl-swarm/modal-login/temp-data/"*.json 1> /dev/null 2>&1; then
+  rm -r $HOME/rl-swarm/modal-login/temp-data/*.json 2> /dev/null || true
 fi
 
 sleep 2
@@ -525,11 +525,21 @@ echo -e "${RED}${BOLD}[✗] Failed to set up virtual environment.${NC}"
 if [ -z "$CONFIG_PATH" ]; then
     if command -v nvidia-smi &> /dev/null || [ -d "/proc/driver/nvidia" ]; then
         echo -e "${GREEN}${BOLD}[✓] GPU detected${NC}"
+        
+        # Here was the problematic break statement - removing it and fixing logic
         case "$PARAM_B" in
-            32 | 72) CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-bnb-4bit-deepseek-r1.yaml" && break ;;
-            0.5 | 1.5 | 7) CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-deepseek-r1.yaml" && break ;;
-            *)  echo ">>> Please answer in [0.5, 1.5, 7, 32, 72]." ;;
+            32 | 72) 
+                CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-bnb-4bit-deepseek-r1.yaml"
+                ;;
+            0.5 | 1.5 | 7) 
+                CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-deepseek-r1.yaml"
+                ;;
+            *)  
+                echo ">>> Parameter size not recognized. Defaulting to 0.5b."
+                CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
+                ;;
         esac
+        
         if [ "$USE_BIG_SWARM" = true ]; then
             GAME="dapo"
         else
