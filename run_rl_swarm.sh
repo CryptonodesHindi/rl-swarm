@@ -129,6 +129,8 @@ check_cuda_installation() {
     return 0
 }
 
+check_cuda_installation
+
 while true; do
     # Prompt the user
     echo -e "\033[36m\033[1mPlease select a swarm to join:\n[A] Math\n[B] Math Hard\033[0m"
