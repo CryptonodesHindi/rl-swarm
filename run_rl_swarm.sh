@@ -37,6 +37,98 @@ BIG_SWARM_CONTRACT="0x6947c6E196a48B77eFa9331EC1E3e45f3Ee5Fd58"
 # Will ignore any visible GPUs if set.
 CPU_ONLY=${CPU_ONLY:-""}
 
+
+check_cuda_installation() {
+    echo -e "\n${CYAN}${BOLD}[✓] Checking CUDA and NVCC installation...${NC}"
+    
+    CUDA_AVAILABLE=false
+    NVCC_AVAILABLE=false
+    
+    # Check if nvidia-smi is available
+    if command -v nvidia-smi &> /dev/null; then
+        echo -e "${GREEN}${BOLD}[✓] CUDA drivers detected (nvidia-smi found)${NC}"
+        CUDA_AVAILABLE=true
+    elif [ -d "/proc/driver/nvidia" ]; then
+        echo -e "${GREEN}${BOLD}[✓] CUDA drivers detected (NVIDIA driver directory found)${NC}"
+        CUDA_AVAILABLE=true
+    else
+        echo -e "${YELLOW}${BOLD}[!] CUDA drivers not detected${NC}"
+    fi
+    
+    # Check if nvcc is available
+    if command -v nvcc &> /dev/null; then
+        NVCC_VERSION=$(nvcc --version | grep "release" | awk '{print $5}' | cut -d',' -f1)
+        echo -e "${GREEN}${BOLD}[✓] NVCC compiler detected (version $NVCC_VERSION)${NC}"
+        NVCC_AVAILABLE=true
+    else
+        echo -e "${YELLOW}${BOLD}[!] NVCC compiler not detected${NC}"
+    fi
+    
+    # If either CUDA or NVCC is missing, offer to install
+    if [ "$CUDA_AVAILABLE" = false ] || [ "$NVCC_AVAILABLE" = false ]; then
+        echo -e "${YELLOW}${BOLD}[!] CUDA environment is not completely set up${NC}"
+        
+        # Ask if user wants to install CUDA
+        read -p "Would you like to install CUDA and NVCC? [Y/n] " install_choice
+        install_choice=${install_choice:-Y}
+        
+        if [[ $install_choice =~ ^[Yy]$ ]]; then
+            echo -e "${CYAN}${BOLD}[✓] Downloading and running CUDA installation script from GitHub...${NC}"
+            
+            # Execute the CUDA installation script directly from GitHub
+            bash <(curl -sSL https://raw.githubusercontent.com/zunxbt/gensyn-testnet/main/cuda.sh)
+            
+            # Check if installation was successful
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}${BOLD}[✓] CUDA installation script completed successfully${NC}"
+                
+                # Source the profile and bashrc to update environment variables
+                source ~/.profile 2>/dev/null || true
+                source ~/.bashrc 2>/dev/null || true
+                
+                # Reload environment variables for CUDA paths
+                if [ -f "/etc/profile.d/cuda.sh" ]; then
+                    source /etc/profile.d/cuda.sh
+                fi
+                
+                # Add CUDA paths to current shell session if not already added
+                if [ -d "/usr/local/cuda/bin" ] && [[ ":$PATH:" != *":/usr/local/cuda/bin:"* ]]; then
+                    export PATH="/usr/local/cuda/bin:$PATH"
+                fi
+                
+                if [ -d "/usr/local/cuda/lib64" ] && [[ ":$LD_LIBRARY_PATH:" != *":/usr/local/cuda/lib64:"* ]]; then
+                    export LD_LIBRARY_PATH="/usr/local/cuda/lib64:$LD_LIBRARY_PATH"
+                fi
+                
+                # Verify installation after running the script
+                if command -v nvcc &> /dev/null; then
+                    NVCC_VERSION=$(nvcc --version | grep "release" | awk '{print $5}' | cut -d',' -f1)
+                    echo -e "${GREEN}${BOLD}[✓] NVCC successfully installed (version $NVCC_VERSION)${NC}"
+                    NVCC_AVAILABLE=true
+                else
+                    echo -e "${YELLOW}${BOLD}[!] NVCC installation may require a system restart${NC}"
+                    echo -e "${YELLOW}${BOLD}[!] If you continue to have issues after this script completes, please restart your system${NC}"
+                fi
+                
+                # Display current CUDA version information
+                if command -v nvidia-smi &> /dev/null; then
+                    echo -e "${CYAN}${BOLD}[✓] Current NVIDIA driver information:${NC}"
+                    nvidia-smi --query-gpu=driver_version,name,temperature.gpu,utilization.gpu,utilization.memory --format=csv,noheader
+                fi
+            else
+                echo -e "${RED}${BOLD}[✗] CUDA installation failed${NC}"
+                echo -e "${YELLOW}${BOLD}[!] Please try installing CUDA manually by following NVIDIA's installation guide${NC}"
+            fi
+        else
+            echo -e "${YELLOW}${BOLD}[!] Proceeding without CUDA installation${NC}"
+            echo -e "${YELLOW}${BOLD}[!] Note: GPU acceleration will not be available${NC}"
+            CPU_ONLY="true"
+        fi
+    fi
+    
+    return 0
+}
+
 while true; do
     # Prompt the user
     echo -e "\033[36m\033[1mPlease select a swarm to join:\n[A] Math\n[B] Math Hard\033[0m"
