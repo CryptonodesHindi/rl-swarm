@@ -705,11 +705,6 @@ else
     fi
 fi
 
-if [ -n "$VIRTUAL_ENV" ]; then
-    echo -e "\n${CYAN}${BOLD}[✓] Deactivating existing virtual environment...${NC}"
-    deactivate
-fi
-
 echo -e "${CYAN}${BOLD}[✓] Setting up Python virtual environment...${NC}"
 python3 -m venv .venv && . .venv/bin/activate && \
 echo -e "${GREEN}${BOLD}[✓] Python virtual environment set up successfully.${NC}" || \
@@ -765,8 +760,10 @@ else
 fi
 
 echo -e "\n${GREEN}${BOLD}[✓] Good luck in the swarm! Your training session is about to begin.\n${NC}"
-[ "$(uname)" = "Darwin" ] && sed -i '' -E 's/(startup_timeout: *float *= *)[0-9.]+/\1120/' $(python3 -c "import hivemind.p2p.p2p_daemon as m; print(m.__file__)") || sed -i -E 's/(startup_timeout: *float *= *)[0-9.]+/\1120/' $(python3 -c "import hivemind.p2p.p2p_daemon as m; print(m.__file__)")
-sleep 2
+[ "$(uname)" = "Darwin" ] && sed -i '' -E -e 's/(startup_timeout: *float *= *)[0-9.]+/\1120/' -e '/startup_timeout: float = 120,/a\'$'\n''    bootstrap_timeout: float = 120,' -e '/anonymous_p2p = await cls\.create\(/a\'$'\n''        bootstrap_timeout=120,' $(python3 -c "import hivemind.p2p.p2p_daemon as m; print(m.__file__)") || sed -i -E -e 's/(startup_timeout: *float *= *)[0-9.]+/\1120/' -e '/startup_timeout: float = 120,/a\    bootstrap_timeout: float = 120,' -e '/anonymous_p2p = await cls\.create\(/a\        bootstrap_timeout=120,' $(python3 -c "import hivemind.p2p.p2p_daemon as m; print(m.__file__)")
+
+[ "$(uname)" = "Darwin" ] && sed -i '' -e 's/bootstrap_timeout: Optional\[float\] = None/bootstrap_timeout: float = 120/' -e 's/p2p = await P2P.create(\*\*kwargs)/p2p = await P2P.create(bootstrap_timeout=120, **kwargs)/' $(python3 -c 'import hivemind.dht.node as m; print(m.__file__)') || sed -i -e 's/bootstrap_timeout: Optional\[float\] = None/bootstrap_timeout: float = 120/' -e 's/p2p = await P2P.create(\*\*kwargs)/p2p = await P2P.create(bootstrap_timeout=120, **kwargs)/' $(python3 -c 'import hivemind.dht.node as m; print(m.__file__)')
+
 
 if [ -n "$ORG_ID" ]; then
     python -m hivemind_exp.gsm8k.train_single_gpu \
