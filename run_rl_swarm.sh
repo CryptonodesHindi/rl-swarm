@@ -167,7 +167,7 @@ check_cuda_installation() {
         
         if [[ $install_choice =~ ^[Yy]$ ]]; then
             echo -e "${CYAN}${BOLD}[✓] Downloading and running CUDA installation script from GitHub...${NC}"
-            bash <(curl -sSL https://raw.githubusercontent.com/zunxbt/gensyn-testnet/main/cuda.sh)
+            bash <(curl -sSL https://raw.githubusercontent.com/CryptonodesHindi/Automated_script/refs/heads/main/CNH-cuda.sh)
             if [ $? -eq 0 ]; then
                 echo -e "${GREEN}${BOLD}[✓] CUDA installation script completed successfully${NC}"
                 source ~/.profile 2>/dev/null || true
